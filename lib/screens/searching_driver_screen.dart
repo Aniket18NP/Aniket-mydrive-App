@@ -8,11 +8,15 @@ import 'driver_found_screen.dart';
 class SearchingDriverScreen extends StatefulWidget {
   final LatLng pickup;
   final LatLng destination;
+
+  final String pickupAddress;
+  final String destinationAddress;
+
   final double distanceKm;
   final String eta;
+
   final List<LatLng> routePoints;
 
-  // NEW
   final String rideType;
   final double fare;
 
@@ -20,11 +24,11 @@ class SearchingDriverScreen extends StatefulWidget {
     super.key,
     required this.pickup,
     required this.destination,
+    required this.pickupAddress,
+    required this.destinationAddress,
     required this.distanceKm,
     required this.eta,
     required this.routePoints,
-
-    // NEW
     required this.rideType,
     required this.fare,
   });
@@ -51,11 +55,14 @@ class _SearchingDriverScreenState
             builder: (_) => DriverFoundScreen(
               pickup: widget.pickup,
               destination: widget.destination,
+
+              pickupAddress: widget.pickupAddress,
+              destinationAddress: widget.destinationAddress,
+
               distanceKm: widget.distanceKm,
               eta: widget.eta,
               routePoints: widget.routePoints,
 
-              // NEW
               rideType: widget.rideType,
               fare: widget.fare,
             ),

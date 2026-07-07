@@ -13,19 +13,24 @@ class RideBottomSheet extends StatefulWidget {
   final LatLng pickup;
   final LatLng destination;
 
+  final String pickupAddress;
+  final String destinationAddress;
+
   final List<LatLng> routePoints;
 
- const RideBottomSheet({
-  super.key,
-  required this.bikeFare,
-  required this.economyFare,
-  required this.suvFare,
-  required this.duration,
-  required this.distance,
-  required this.pickup,
-  required this.destination,
-  required this.routePoints,
-});
+  const RideBottomSheet({
+    super.key,
+    required this.bikeFare,
+    required this.economyFare,
+    required this.suvFare,
+    required this.duration,
+    required this.distance,
+    required this.pickup,
+    required this.destination,
+    required this.pickupAddress,
+    required this.destinationAddress,
+    required this.routePoints,
+  });
 
   @override
   State<RideBottomSheet> createState() => _RideBottomSheetState();
@@ -104,41 +109,45 @@ class _RideBottomSheetState extends State<RideBottomSheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-             onPressed: () {
-  double selectedFare;
+              onPressed: () {
+                double selectedFare;
 
-  switch (selectedRide) {
-    case "Bike":
-      selectedFare = widget.bikeFare;
-      break;
+                switch (selectedRide) {
+                  case "Bike":
+                    selectedFare = widget.bikeFare;
+                    break;
 
-    case "SUV":
-      selectedFare = widget.suvFare;
-      break;
+                  case "SUV":
+                    selectedFare = widget.suvFare;
+                    break;
 
-    default:
-      selectedFare = widget.economyFare;
-  }
+                  default:
+                    selectedFare = widget.economyFare;
+                }
 
-  Navigator.pop(context);
+                Navigator.pop(context);
 
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => SearchingDriverScreen(
-        pickup: widget.pickup,
-        destination: widget.destination,
-        distanceKm: widget.distance,
-        eta: widget.duration,
-        routePoints: widget.routePoints,
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SearchingDriverScreen(
+                      pickup: widget.pickup,
+                      destination: widget.destination,
 
-        // NEW
-        rideType: selectedRide,
-        fare: selectedFare,
-      ),
-    ),
-  );
-},
+                      pickupAddress: widget.pickupAddress,
+                      destinationAddress: widget.destinationAddress,
+
+                      distanceKm: widget.distance,
+                      eta: widget.duration,
+                      routePoints: widget.routePoints,
+
+                      // REQUIRED
+                      rideType: selectedRide,
+                      fare: selectedFare,
+                    ),
+                  ),
+                );
+              },
               child: Text("Confirm $selectedRide"),
             ),
           ),

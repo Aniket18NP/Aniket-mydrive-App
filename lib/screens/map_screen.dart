@@ -38,6 +38,9 @@ class _MapScreenState extends State<MapScreen> {
 
   Position? currentPosition;
 
+  String pickupAddress = "";
+String destinationAddress = "";
+
  LatLng? passengerPosition;
 
 LatLng? selectedDestination = const LatLng(
@@ -103,6 +106,8 @@ LatLng? driverPosition;
       currentPosition!.latitude,
       currentPosition!.longitude,
     );
+
+    pickupAddress = "Current Location";
 
     markers.add(
       Marker(
@@ -397,6 +402,8 @@ if (mounted) {
                         onTap: () async {
                           searchController.text = text;
 
+                          destinationAddress = text;
+
                           final placeId =
                               place["placePrediction"]["placeId"];
 
@@ -533,6 +540,8 @@ if (mounted) {
   duration: duration,
   pickup: passengerPosition!,
   destination: selectedDestination!,
+  pickupAddress: pickupAddress,
+  destinationAddress: destinationAddress,
   routePoints: routePoints,
 ),
                   );

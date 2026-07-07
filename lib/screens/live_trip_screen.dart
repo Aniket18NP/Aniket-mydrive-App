@@ -7,7 +7,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class LiveTripScreen extends StatefulWidget {
   final LatLng pickup;
-  final LatLng destination;
+final LatLng destination;
+
+final String pickupAddress;
+final String destinationAddress;
   final double distanceKm;
   final String eta;
   final List<LatLng> routePoints;
@@ -18,8 +21,10 @@ class LiveTripScreen extends StatefulWidget {
   const LiveTripScreen({
     super.key,
     required this.pickup,
-    required this.destination,
-    required this.distanceKm,
+required this.destination,
+required this.pickupAddress,
+required this.destinationAddress,
+required this.distanceKm,
     required this.eta,
     required this.routePoints,
     required this.rideType,
@@ -127,8 +132,8 @@ WidgetsBinding.instance.addPostFrameCallback((_) {
   distance: originalDistance,
   tripTime: tripTime,
   rideType: widget.rideType,
-  pickup: "Current Location",
-  destination: "Destination",
+  pickup: widget.pickupAddress,
+  destination: widget.destinationAddress,
 ),
   ),
 );
@@ -174,8 +179,8 @@ void startDriverMovement() {
   distance: originalDistance,
   tripTime: tripTime,
   rideType: widget.rideType,
-  pickup: "Current Location",
-  destination: "Destination",
+  pickup: widget.pickupAddress,
+  destination: widget.destinationAddress,
 ),
           ),
         );

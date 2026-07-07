@@ -6,11 +6,14 @@ import 'live_trip_screen.dart';
 class DriverFoundScreen extends StatelessWidget {
   final LatLng pickup;
   final LatLng destination;
+
+  final String pickupAddress;
+  final String destinationAddress;
+
   final double distanceKm;
   final String eta;
   final List<LatLng> routePoints;
 
-  // NEW
   final String rideType;
   final double fare;
 
@@ -18,11 +21,11 @@ class DriverFoundScreen extends StatelessWidget {
     super.key,
     required this.pickup,
     required this.destination,
+    required this.pickupAddress,
+    required this.destinationAddress,
     required this.distanceKm,
     required this.eta,
     required this.routePoints,
-
-    // NEW
     required this.rideType,
     required this.fare,
   });
@@ -93,6 +96,22 @@ class DriverFoundScreen extends StatelessWidget {
             ),
 
             Card(
+              child: ListTile(
+                leading: const Icon(Icons.location_on),
+                title: const Text("Pickup"),
+                subtitle: Text(pickupAddress),
+              ),
+            ),
+
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.flag),
+                title: const Text("Destination"),
+                subtitle: Text(destinationAddress),
+              ),
+            ),
+
+            Card(
               elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
@@ -107,7 +126,6 @@ class DriverFoundScreen extends StatelessWidget {
               ),
             ),
 
-            // NEW CARD
             Card(
               child: ListTile(
                 leading: const Icon(Icons.local_taxi),
@@ -137,16 +155,16 @@ class DriverFoundScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => LiveTripScreen(
-                        pickup: pickup,
-                        destination: destination,
-                        distanceKm: distanceKm,
-                        eta: eta,
-                        routePoints: routePoints,
-
-                        // NEW
-                        rideType: rideType,
-                        fare: fare,
-                      ),
+  pickup: pickup,
+  destination: destination,
+  pickupAddress: pickupAddress,
+  destinationAddress: destinationAddress,
+  distanceKm: distanceKm,
+  eta: eta,
+  routePoints: routePoints,
+  rideType: rideType,
+  fare: fare,
+),
                     ),
                   );
                 },
