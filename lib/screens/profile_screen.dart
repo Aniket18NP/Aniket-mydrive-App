@@ -6,6 +6,7 @@ import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 import '../services/ride_service.dart';
 import 'login_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -131,6 +132,24 @@ class ProfileScreen extends StatelessWidget {
                         trailing: Text("4.9 ⭐"),
                       ),
                     ),
+
+                    SizedBox(
+  width: double.infinity,
+  child: ElevatedButton.icon(
+    icon: const Icon(Icons.edit),
+    label: const Text("Edit Profile"),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const EditProfileScreen(),
+        ),
+      );
+    },
+  ),
+),
+
+const SizedBox(height: 15),
 
                     const SizedBox(height: 30),
 
