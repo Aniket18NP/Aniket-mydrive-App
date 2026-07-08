@@ -3,6 +3,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../screens/searching_driver_screen.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../models/ride_request_model.dart';
+import '../services/ride_request_service.dart';
+
 class RideBottomSheet extends StatefulWidget {
   final double bikeFare;
   final double economyFare;
@@ -38,6 +44,8 @@ class RideBottomSheet extends StatefulWidget {
 
 class _RideBottomSheetState extends State<RideBottomSheet> {
   String selectedRide = "Economy";
+  final RideRequestService rideRequestService =
+    RideRequestService();
 
   @override
   Widget build(BuildContext context) {
@@ -109,45 +117,77 @@ class _RideBottomSheetState extends State<RideBottomSheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                double selectedFare;
+              onPressed: () async {
+  double selectedFare;
 
-                switch (selectedRide) {
-                  case "Bike":
-                    selectedFare = widget.bikeFare;
-                    break;
+  switch (selectedRide) {
+    case "Bike":
+      selectedFare = widget.bikeFare;
+      break;
 
-                  case "SUV":
-                    selectedFare = widget.suvFare;
-                    break;
+    case "SUV":
+      selectedFare = widget.suvFare;
+      break;
 
-                  default:
-                    selectedFare = widget.economyFare;
-                }
+    default:
+      selectedFare = widget.economyFare;
+  }
 
-                Navigator.pop(context);
+  final rideId =
+      FirebaseFirestore.instance.collection("rides").doc().id;
 
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => SearchingDriverScreen(
-                      pickup: widget.pickup,
-                      destination: widget.destination,
+  final passengerId =
+      FirebaseAuth.instance.currentUser!.uid;
 
-                      pickupAddress: widget.pickupAddress,
-                      destinationAddress: widget.destinationAddress,
+  final ride = RideRequestModel(
+    rideId: rideId,
+    passengerId: passengerId,
+    driverId: "",
 
-                      distanceKm: widget.distance,
-                      eta: widget.duration,
-                      routePoints: widget.routePoints,
+    pickup: widget.pickupAddress,
+    destination: widget.destinationAddress,
 
-                      // REQUIRED
-                      rideType: selectedRide,
-                      fare: selectedFare,
-                    ),
-                  ),
-                );
-              },
+    pickupLat: widget.pickup.latitude,
+    pickupLng: widget.pickup.longitude,
+
+    destinationLat: widget.destination.latitude,
+    destinationLng: widget.destination.longitude,
+
+    distance: widget.distance,
+    fare: selectedFare,
+
+    rideType: selectedRide,
+
+    paymentMethod: "Wallet",
+
+    status: "Searching",
+
+    createdAt: DateTime.now(),
+  );
+
+  await rideRequestService.createRideRequest(ride);
+
+  if (!context.mounted) return;
+
+  Navigator.pop(context);
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => SearchingDriverScreen(
+        pickup: widget.pickup,
+        destination: widget.destination,
+        pickupAddress: widget.pickupAddress,
+        destinationAddress: widget.destinationAddress,
+        distanceKm: widget.distance,
+        eta: widget.duration,
+        routePoints: widget.routePoints,
+        rideType: selectedRide,
+        fare: selectedFare,
+      ),
+    ),
+  );
+},
               child: Text("Confirm $selectedRide"),
             ),
           ),

@@ -41,36 +41,33 @@ class SearchingDriverScreen extends StatefulWidget {
 class _SearchingDriverScreenState
     extends State<SearchingDriverScreen> {
   @override
-  void initState() {
-    super.initState();
+void initState() {
+  super.initState();
 
-    Timer(
-      const Duration(seconds: 5),
-      () {
-        if (!mounted) return;
+  Timer(
+    const Duration(seconds: 5),
+    () {
+      if (!mounted) return;
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DriverFoundScreen(
-              pickup: widget.pickup,
-              destination: widget.destination,
-
-              pickupAddress: widget.pickupAddress,
-              destinationAddress: widget.destinationAddress,
-
-              distanceKm: widget.distanceKm,
-              eta: widget.eta,
-              routePoints: widget.routePoints,
-
-              rideType: widget.rideType,
-              fare: widget.fare,
-            ),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DriverFoundScreen(
+            pickup: widget.pickup,
+            destination: widget.destination,
+            pickupAddress: widget.pickupAddress,
+            destinationAddress: widget.destinationAddress,
+            distanceKm: widget.distanceKm,
+            eta: widget.eta,
+            routePoints: widget.routePoints,
+            rideType: widget.rideType,
+            fare: widget.fare,
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
