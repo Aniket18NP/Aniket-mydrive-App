@@ -29,13 +29,13 @@ final String destination;
     RideData.rides.last.tripTime != tripTime) {
   RideData.rides.add(
     RideHistory(
-      pickup: "Current Location",
-      destination: "Destination",
-      fare: fare,
-      distance: distance,
-      tripTime: tripTime,
-      date: DateTime.now().toString().substring(0, 16),
-    ),
+  pickup: pickup,
+  destination: destination,
+  fare: fare,
+  distance: distance,
+  tripTime: tripTime,
+  date: DateTime.now().toString().substring(0, 16),
+),
   );
 }
 
@@ -44,7 +44,8 @@ final String destination;
         title: const Text("Trip Completed"),
         centerTitle: true,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
+  child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -77,12 +78,20 @@ final String destination;
             ),
 
             Card(
-              child: ListTile(
-                leading: const Icon(Icons.route),
-                title: const Text("Distance"),
-                trailing: Text("${distance.toStringAsFixed(2)} km"),
-              ),
-            ),
+  child: ListTile(
+    leading: const Icon(Icons.my_location),
+    title: const Text("Pickup"),
+    subtitle: Text(pickup),
+  ),
+),
+
+Card(
+  child: ListTile(
+    leading: const Icon(Icons.location_on),
+    title: const Text("Destination"),
+    subtitle: Text(destination),
+  ),
+),
 
             Card(
   child: ListTile(
@@ -124,7 +133,7 @@ final String destination;
               ),
             ),
 
-            const Spacer(),
+           const SizedBox(height: 30),
 
             SizedBox(
               width: double.infinity,
@@ -134,12 +143,12 @@ final String destination;
                   context,
                   MaterialPageRoute(
                   builder: (_) => PaymentScreen(
-                  fare: fare,
-                  distance: distance,
-                  rideType: rideType,
-                  pickup: "Current Location",
-                  destination: "Destination",
-                  ),
+  fare: fare,
+  distance: distance,
+  rideType: rideType,
+  pickup: pickup,
+  destination: destination,
+),
                 ),
               );
               },
@@ -148,6 +157,7 @@ final String destination;
             ),
           ],
         ),
+      ),
       ),
     );
   }

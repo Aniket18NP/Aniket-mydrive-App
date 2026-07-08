@@ -15,6 +15,8 @@ import 'history_screen.dart';
 
 import '../widgets/ride_bottom_sheet.dart';
 
+
+
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -97,6 +99,8 @@ LatLng? driverPosition;
     }
   }
 
+
+
   Future<void> getCurrentLocation() async {
     currentPosition = await locationService.getCurrentLocation();
 
@@ -107,7 +111,7 @@ LatLng? driverPosition;
       currentPosition!.longitude,
     );
 
-    pickupAddress = "Current Location";
+   pickupAddress = "Current Location";
 
     markers.add(
       Marker(

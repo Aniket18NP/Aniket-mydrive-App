@@ -37,7 +37,8 @@ class DriverFoundScreen extends StatelessWidget {
         title: const Text("Driver Found"),
         centerTitle: true,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
+  child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -139,7 +140,7 @@ class DriverFoundScreen extends StatelessWidget {
               ),
             ),
 
-            const Spacer(),
+            const SizedBox(height: 30),
 
             SizedBox(
               width: double.infinity,
@@ -210,6 +211,7 @@ class DriverFoundScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
