@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
-
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../models/ride_model.dart';
-import '../services/ride_service.dart';
-
 class PaymentScreen extends StatefulWidget {
+  final String rideId;
   final double fare;
   final double distance;
   final String rideType;
@@ -15,6 +11,7 @@ class PaymentScreen extends StatefulWidget {
 
   const PaymentScreen({
     super.key,
+    required this.rideId,
     required this.fare,
     required this.distance,
     required this.rideType,
@@ -28,7 +25,62 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   String selected = "Cash";
-  final RideService _rideService = RideService();
+  bool isProcessing = false;
+
+  Future<void> processPayment() async {
+    if (isProcessing) return;
+
+    setState(() {
+      isProcessing = true;
+    });
+
+    try {
+      print("Processing payment...");
+      print("Ride ID: ${widget.rideId}");
+      print("Payment Method: $selected");
+
+      await FirebaseFirestore.instance
+          .collection("rides")
+          .doc(widget.rideId)
+          .update({
+        "paymentMethod": selected,
+        "paymentStatus": "Paid",
+      });
+
+      print("Payment updated successfully!");
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "$selected payment successful!",
+          ),
+        ),
+      );
+
+      Navigator.popUntil(
+        context,
+        (route) => route.isFirst,
+      );
+    } catch (e) {
+      print("Payment Error: $e");
+
+      if (!mounted) return;
+
+      setState(() {
+        isProcessing = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Payment failed: $e",
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,36 +113,50 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
             const SizedBox(height: 40),
 
-            RadioListTile(
+            RadioListTile<String>(
               value: "Cash",
               groupValue: selected,
-              onChanged: (value) {
-                setState(() {
-                  selected = value.toString();
-                });
-              },
+              onChanged: isProcessing
+                  ? null
+                  : (value) {
+                      if (value == null) return;
+
+                      setState(() {
+                        selected = value;
+                      });
+                    },
               title: const Text("Cash"),
             ),
 
-            RadioListTile(
+            RadioListTile<String>(
               value: "Card",
               groupValue: selected,
-              onChanged: (value) {
-                setState(() {
-                  selected = value.toString();
-                });
-              },
-              title: const Text("Credit / Debit Card"),
+              onChanged: isProcessing
+                  ? null
+                  : (value) {
+                      if (value == null) return;
+
+                      setState(() {
+                        selected = value;
+                      });
+                    },
+              title: const Text(
+                "Credit / Debit Card",
+              ),
             ),
 
-            RadioListTile(
+            RadioListTile<String>(
               value: "Wallet",
               groupValue: selected,
-              onChanged: (value) {
-                setState(() {
-                  selected = value.toString();
-                });
-              },
+              onChanged: isProcessing
+                  ? null
+                  : (value) {
+                      if (value == null) return;
+
+                      setState(() {
+                        selected = value;
+                      });
+                    },
               title: const Text("Digital Wallet"),
             ),
 
@@ -98,41 +164,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
             SizedBox(
               width: double.infinity,
+              height: 55,
               child: ElevatedButton(
-                child: const Text("Pay"),
-                onPressed: () async {
-  final user = FirebaseAuth.instance.currentUser;
-
-  if (user == null) return;
-
-  final ride = RideModel(
-    rideId: FirebaseFirestore.instance.collection("rides").doc().id,
-    passengerId: user.uid,
-    pickup: widget.pickup,
-    destination: widget.destination,
-    distance: widget.distance,
-    fare: widget.fare,
-    rideType: widget.rideType,
-    paymentMethod: selected,
-    status: "Completed",
-    createdAt: DateTime.now(),
-  );
-
-  await _rideService.createRide(ride);
-
-  if (!context.mounted) return;
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text("$selected payment successful!"),
-    ),
-  );
-
-  Navigator.popUntil(
-    context,
-    (route) => route.isFirst,
-  );
-},
+                onPressed:
+                    isProcessing ? null : processPayment,
+                child: isProcessing
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        "Pay NPR ${widget.fare.toStringAsFixed(0)}",
+                      ),
               ),
             ),
           ],

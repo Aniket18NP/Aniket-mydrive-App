@@ -39,13 +39,10 @@ class LiveTripScreen extends StatefulWidget {
   });
 
   @override
-  State<LiveTripScreen> createState() =>
-      _LiveTripScreenState();
+  State<LiveTripScreen> createState() => _LiveTripScreenState();
 }
 
-class _LiveTripScreenState
-    extends State<LiveTripScreen> {
-
+class _LiveTripScreenState extends State<LiveTripScreen> {
   final RideRequestService rideRequestService =
       RideRequestService();
 
@@ -58,7 +55,6 @@ class _LiveTripScreenState
   late int remainingMinutes;
 
   late double originalDistance;
-  late int originalMinutes;
 
   int currentRouteIndex = 0;
 
@@ -76,13 +72,19 @@ class _LiveTripScreenState
 
   double carRotation = 0;
 
+  // Prevents duplicate completion.
   bool tripCompleted = false;
 
   @override
   void initState() {
     super.initState();
 
+    debugPrint(
+      "LIVE TRIP STARTED WITH RIDE ID: ${widget.rideId}",
+    );
+
     remainingDistance = widget.distanceKm;
+    originalDistance = widget.distanceKm;
 
     remainingMinutes = int.tryParse(
           widget.eta.replaceAll(
@@ -92,13 +94,9 @@ class _LiveTripScreenState
         ) ??
         0;
 
-    originalDistance = widget.distanceKm;
-    originalMinutes = remainingMinutes;
-
     polylines.add(
       Polyline(
-        polylineId:
-            const PolylineId("tripRoute"),
+        polylineId: const PolylineId("tripRoute"),
         points: widget.routePoints,
         color: Colors.blue,
         width: 6,
@@ -106,327 +104,371 @@ class _LiveTripScreenState
     );
 
     startTripTimer();
-
     loadCarIcon();
 
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       startDriverMovement();
     });
   }
+
+  // =========================================================
+  // ONE METHOD FOR ALL TRIP COMPLETION
+  // =========================================================
+
+  Future<void> finishTrip() async {
+    // Stop if trip was already completed.
+    if (tripCompleted) {
+      debugPrint(
+        "finishTrip ignored because trip is already completed.",
+      );
+      return;
+    }
+
+    // Lock immediately to prevent another timer/button call.
+    tripCompleted = true;
+
+    tripTimer?.cancel();
+    driverTimer?.cancel();
+
+    debugPrint("====================================");
+    debugPrint("COMPLETING RIDE");
+    debugPrint("RIDE ID: ${widget.rideId}");
+    debugPrint("====================================");
+
+    try {
+      // Update the SAME original Firestore ride document.
+      await rideRequestService.completeRide(
+        widget.rideId,
+      );
+
+      debugPrint(
+        "RIDE COMPLETED SUCCESSFULLY: ${widget.rideId}",
+      );
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TripCompletedScreen(
+            rideId: widget.rideId,
+            fare: widget.fare,
+            distance: originalDistance,
+            tripTime: tripTime,
+            rideType: widget.rideType,
+            pickup: widget.pickupAddress,
+            destination: widget.destinationAddress,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint("ERROR COMPLETING RIDE: $e");
+
+      // Allow retry if Firestore update failed.
+      tripCompleted = false;
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Could not complete ride: $e",
+          ),
+        ),
+      );
+    }
+  }
+
+  // =========================================================
+  // TRIP TIMER
+  // =========================================================
 
   void startTripTimer() {
     tripTimer?.cancel();
 
     tripTimer = Timer.periodic(
       const Duration(seconds: 1),
-      (timer) async {
-        if (!mounted) return;
+      (timer) {
+        if (!mounted || tripCompleted) {
+          timer.cancel();
+          return;
+        }
 
         setState(() {
           tripSeconds++;
+
+          if (remainingDistance > 0) {
+            remainingDistance -= 0.01;
+
+            if (remainingDistance < 0) {
+              remainingDistance = 0;
+            }
+          }
+
+          if (tripSeconds % 30 == 0 &&
+              remainingMinutes > 0) {
+            remainingMinutes--;
+          }
         });
 
-        if (remainingDistance > 0) {
-          remainingDistance -= 0.01;
-
-          if (remainingDistance < 0) {
-            remainingDistance = 0;
-          }
-        }
-
-        if (tripSeconds % 30 == 0 &&
-            remainingMinutes > 0) {
-          remainingMinutes--;
-        }
-
-        if (remainingDistance <= 0 &&
-            !tripCompleted) {
-          tripCompleted = true;
-
-          tripTimer?.cancel();
-          driverTimer?.cancel();
-
-          await rideRequestService.completeRide(
-            widget.rideId,
-          );
-
-          if (!mounted) return;
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  TripCompletedScreen(
-                fare: widget.fare,
-                distance: originalDistance,
-                tripTime: tripTime,
-                rideType: widget.rideType,
-                pickup:
-                    widget.pickupAddress,
-                destination:
-                    widget.destinationAddress,
-              ),
-            ),
-          );
+        if (remainingDistance <= 0) {
+          finishTrip();
         }
       },
     );
   }
 
+  // =========================================================
+  // LOAD CAR ICON
+  // =========================================================
+
   Future<void> loadCarIcon() async {
-  carIcon = await BitmapDescriptor.asset(
-    const ImageConfiguration(size: Size(60, 60)),
-    "assets/images/car.png",
-  );
+    try {
+      carIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(
+          size: Size(60, 60),
+        ),
+        "assets/images/car.png",
+      );
 
-  if (mounted) {
-    setState(() {});
-  }
-}
-
-void startDriverMovement() {
-  driverTimer?.cancel();
-
-  driverTimer = Timer.periodic(
-    const Duration(milliseconds: 500),
-    (timer) async {
-      if (tripCompleted) {
-        timer.cancel();
-        return;
+      if (mounted) {
+        setState(() {});
       }
+    } catch (e) {
+      debugPrint("CAR ICON ERROR: $e");
+    }
+  }
 
-      if (currentRouteIndex >= widget.routePoints.length) {
-        timer.cancel();
+  // =========================================================
+  // DRIVER MOVEMENT
+  // =========================================================
 
-        if (!tripCompleted) {
-          tripCompleted = true;
+  void startDriverMovement() {
+    driverTimer?.cancel();
 
-          await rideRequestService.completeRide(
-            widget.rideId,
-          );
+    if (widget.routePoints.isEmpty) {
+      debugPrint("Route points are empty.");
+      return;
+    }
 
-          if (!mounted) return;
+    // Start from first actual route point.
+    driverPosition = widget.routePoints.first;
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TripCompletedScreen(
-                fare: widget.fare,
-                distance: originalDistance,
-                tripTime: tripTime,
-                rideType: widget.rideType,
-                pickup: widget.pickupAddress,
-                destination: widget.destinationAddress,
-              ),
-            ),
-          );
+    driverTimer = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (timer) {
+        if (!mounted || tripCompleted) {
+          timer.cancel();
+          return;
         }
 
-        return;
-      }
+        if (currentRouteIndex >=
+            widget.routePoints.length) {
+          timer.cancel();
+          finishTrip();
+          return;
+        }
 
-      final nextPoint =
-          widget.routePoints[currentRouteIndex];
+        final nextPoint =
+            widget.routePoints[currentRouteIndex];
 
-      final dx =
-          nextPoint.longitude - driverPosition.longitude;
-      final dy =
-          nextPoint.latitude - driverPosition.latitude;
+        final dx =
+            nextPoint.longitude - driverPosition.longitude;
 
-      carRotation =
-          atan2(dx, dy) * 180 / pi + 180;
+        final dy =
+            nextPoint.latitude - driverPosition.latitude;
 
-      driverPosition = nextPoint;
+        carRotation =
+            atan2(dx, dy) * 180 / pi + 180;
 
-      currentRouteIndex++;
+        driverPosition = nextPoint;
 
-      if (!mounted) return;
+        currentRouteIndex++;
 
-      setState(() {
-        markers.removeWhere(
-          (m) => m.markerId.value == "driver",
-        );
+        if (!mounted) return;
 
-        markers.add(
-          Marker(
-            markerId: const MarkerId("driver"),
-            position: driverPosition,
-            rotation: carRotation,
-            flat: true,
-            anchor: const Offset(0.5, 0.5),
-            icon: carIcon ??
-                BitmapDescriptor.defaultMarker,
-            infoWindow:
-                const InfoWindow(title: "Driver"),
-          ),
-        );
-      });
+        setState(() {
+          markers.removeWhere(
+            (marker) =>
+                marker.markerId.value == "driver",
+          );
 
-      mapController?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: driverPosition,
-            zoom: 17,
-            tilt: 45,
-            bearing: carRotation,
-          ),
-        ),
-      );
-    },
-  );
-}
-
-String get tripTime {
-  final minutes =
-      (tripSeconds ~/ 60).toString().padLeft(2, '0');
-  final seconds =
-      (tripSeconds % 60).toString().padLeft(2, '0');
-
-  return "$minutes:$seconds";
-}
-
-@override
-void dispose() {
-  tripTimer?.cancel();
-  driverTimer?.cancel();
-  super.dispose();
-}
-
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text("Trip in Progress"),
-      centerTitle: true,
-    ),
-    body: Column(
-      children: [
-        Expanded(
-          child: GoogleMap(
-            onMapCreated: (controller) {
-              mapController = controller;
-
-              markers.add(
-                Marker(
-                  markerId:
-                      const MarkerId("driver"),
-                  position: driverPosition,
-                  icon: carIcon ??
-                      BitmapDescriptor.defaultMarker,
-                  infoWindow: const InfoWindow(
-                    title: "Driver",
-                  ),
-                ),
-              );
-            },
-            markers: markers,
-            polylines: polylines,
-            initialCameraPosition:
-                const CameraPosition(
-              target: LatLng(
-                27.7172,
-                85.3240,
+          markers.add(
+            Marker(
+              markerId: const MarkerId("driver"),
+              position: driverPosition,
+              rotation: carRotation,
+              flat: true,
+              anchor: const Offset(0.5, 0.5),
+              icon: carIcon ??
+                  BitmapDescriptor.defaultMarker,
+              infoWindow: const InfoWindow(
+                title: "Driver",
               ),
-              zoom: 15,
             ),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            zoomControlsEnabled: false,
-            mapType: MapType.normal,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius:
-                BorderRadius.vertical(
-              top: Radius.circular(25),
+          );
+        });
+
+        mapController?.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: driverPosition,
+              zoom: 17,
+              tilt: 45,
+              bearing: carRotation,
             ),
           ),
-          child: Column(
-            children: [
-              ListTile(
-                leading:
-                    const Icon(Icons.timer),
-                title: const Text("Trip Time"),
-                trailing: Text(
-                  tripTime,
-                  style: const TextStyle(
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-              ),
-              ListTile(
-                leading:
-                    const Icon(Icons.route),
-                title: const Text(
-                    "Distance Left"),
-                trailing: Text(
-                  "${remainingDistance.toStringAsFixed(2)} km",
-                ),
-              ),
-              ListTile(
-                leading: const Icon(
-                    Icons.access_time),
-                title: const Text("ETA"),
-                trailing: Text(
-                  "$remainingMinutes min",
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style:
-                      ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Colors.red,
-                    foregroundColor:
-                        Colors.white,
-                  ),
-                  onPressed: () async {
-                    if (!tripCompleted) {
-                      tripCompleted = true;
+        );
+      },
+    );
+  }
 
-                      await rideRequestService
-                          .completeRide(
-                        widget.rideId,
-                      );
-                    }
+  // =========================================================
+  // TRIP TIME
+  // =========================================================
 
-                    if (!mounted) return;
+  String get tripTime {
+    final minutes = (tripSeconds ~/ 60)
+        .toString()
+        .padLeft(2, '0');
 
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            TripCompletedScreen(
-                          fare: widget.fare,
-                          distance:
-                              originalDistance,
-                          tripTime: tripTime,
-                          rideType:
-                              widget.rideType,
-                          pickup: widget
-                              .pickupAddress,
-                          destination: widget
-                              .destinationAddress,
-                        ),
+    final seconds = (tripSeconds % 60)
+        .toString()
+        .padLeft(2, '0');
+
+    return "$minutes:$seconds";
+  }
+
+  // =========================================================
+  // DISPOSE
+  // =========================================================
+
+  @override
+  void dispose() {
+    tripTimer?.cancel();
+    driverTimer?.cancel();
+    mapController?.dispose();
+
+    super.dispose();
+  }
+
+  // =========================================================
+  // UI
+  // =========================================================
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Trip in Progress"),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: GoogleMap(
+              onMapCreated: (controller) {
+                mapController = controller;
+
+                if (widget.routePoints.isNotEmpty) {
+                  driverPosition =
+                      widget.routePoints.first;
+                }
+
+                setState(() {
+                  markers.removeWhere(
+                    (marker) =>
+                        marker.markerId.value ==
+                        "driver",
+                  );
+
+                  markers.add(
+                    Marker(
+                      markerId:
+                          const MarkerId("driver"),
+                      position: driverPosition,
+                      icon: carIcon ??
+                          BitmapDescriptor
+                              .defaultMarker,
+                      infoWindow: const InfoWindow(
+                        title: "Driver",
                       ),
-                    );
-                  },
-                  child:
-                      const Text("End Ride"),
-                ),
+                    ),
+                  );
+                });
+              },
+              markers: markers,
+              polylines: polylines,
+              initialCameraPosition: CameraPosition(
+                target: widget.routePoints.isNotEmpty
+                    ? widget.routePoints.first
+                    : widget.pickup,
+                zoom: 15,
               ),
-            ],
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              zoomControlsEnabled: false,
+              mapType: MapType.normal,
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(25),
+              ),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.timer),
+                  title: const Text("Trip Time"),
+                  trailing: Text(
+                    tripTime,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+                ListTile(
+                  leading: const Icon(Icons.route),
+                  title: const Text("Distance Left"),
+                  trailing: Text(
+                    "${remainingDistance.toStringAsFixed(2)} km",
+                  ),
+                ),
+
+                ListTile(
+                  leading:
+                      const Icon(Icons.access_time),
+                  title: const Text("ETA"),
+                  trailing: Text(
+                    "$remainingMinutes min",
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed:
+                        tripCompleted ? null : finishTrip,
+                    child: const Text("End Ride"),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
