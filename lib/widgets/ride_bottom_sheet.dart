@@ -175,6 +175,7 @@ class _RideBottomSheetState extends State<RideBottomSheet> {
     context,
     MaterialPageRoute(
       builder: (_) => SearchingDriverScreen(
+        rideId: rideId,
         pickup: widget.pickup,
         destination: widget.destination,
         pickupAddress: widget.pickupAddress,

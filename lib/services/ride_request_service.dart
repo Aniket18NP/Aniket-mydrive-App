@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/ride_request_model.dart';
 
+
 class RideRequestService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 

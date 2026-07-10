@@ -1,9 +1,10 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'driver_found_screen.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SearchingDriverScreen extends StatefulWidget {
   final LatLng pickup;
@@ -19,6 +20,7 @@ class SearchingDriverScreen extends StatefulWidget {
 
   final String rideType;
   final double fare;
+  final String rideId;
 
   const SearchingDriverScreen({
     super.key,
@@ -31,6 +33,7 @@ class SearchingDriverScreen extends StatefulWidget {
     required this.routePoints,
     required this.rideType,
     required this.fare,
+required this.rideId,
   });
 
   @override
@@ -40,33 +43,51 @@ class SearchingDriverScreen extends StatefulWidget {
 
 class _SearchingDriverScreenState
     extends State<SearchingDriverScreen> {
-  @override
+  
+ @override
 void initState() {
   super.initState();
 
-  Timer(
-    const Duration(seconds: 5),
-    () {
+  FirebaseFirestore.instance
+      .collection("rides")
+      .doc(widget.rideId)
+      .snapshots()
+      .listen((snapshot) {
+    print("Listening to Ride ID: ${widget.rideId}");
+
+    if (!snapshot.exists) {
+      print("Ride document not found");
+      return;
+    }
+
+    final data = snapshot.data()!;
+
+    print("Current Status: ${data["status"]}");
+
+    if (data["status"] == "Accepted") {
+      print("Opening DriverFoundScreen");
+
       if (!mounted) return;
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => DriverFoundScreen(
-            pickup: widget.pickup,
-            destination: widget.destination,
-            pickupAddress: widget.pickupAddress,
-            destinationAddress: widget.destinationAddress,
-            distanceKm: widget.distanceKm,
-            eta: widget.eta,
-            routePoints: widget.routePoints,
-            rideType: widget.rideType,
-            fare: widget.fare,
-          ),
+  rideId: widget.rideId,
+  pickup: widget.pickup,
+  destination: widget.destination,
+  pickupAddress: widget.pickupAddress,
+  destinationAddress: widget.destinationAddress,
+  distanceKm: widget.distanceKm,
+  eta: widget.eta,
+  routePoints: widget.routePoints,
+  rideType: widget.rideType,
+  fare: widget.fare,
+)
         ),
       );
-    },
-  );
+    }
+  });
 }
 
   @override
