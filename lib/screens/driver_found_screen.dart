@@ -132,12 +132,51 @@ String? driverLoadError;
         final String newDriverId =
             data['driverId']?.toString().trim() ?? '';
 
+        final String cancelledBy =
+            data['cancelledBy']?.toString() ?? '';
+
         debugPrint('================================');
         debugPrint('RIDE UPDATE');
         debugPrint('Ride ID: ${widget.rideId}');
         debugPrint('Status: $status');
         debugPrint('Driver ID: $newDriverId');
         debugPrint('================================');
+
+        // =========================================================
+// HANDLE RIDE CANCELLATION
+// =========================================================
+
+if (status == 'Cancelled') {
+  debugPrint('================================');
+  debugPrint('RIDE CANCELLATION DETECTED');
+  debugPrint('Cancelled by: $cancelledBy');
+  debugPrint('================================');
+
+  if (!mounted) return;
+
+  // Cancel listener to prevent duplicate handling.
+  await _rideSubscription?.cancel();
+
+  if (!mounted) return;
+
+  final String message =
+      cancelledBy == 'Driver'
+          ? 'Your driver cancelled the ride.'
+          : 'Ride has been cancelled.';
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.red,
+    ),
+  );
+
+  Navigator.of(context).popUntil(
+    (route) => route.isFirst,
+  );
+
+  return;
+}
 
         // Load driver only when driver ID is available.
         if (newDriverId.isNotEmpty &&
