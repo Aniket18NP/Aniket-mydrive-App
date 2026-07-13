@@ -237,7 +237,47 @@ class HistoryScreen extends StatelessWidget {
             );
           }
 
-          final rides = snapshot.data!;
+          final rides = snapshot.data!
+    .where(
+      (ride) =>
+          ride.status.toLowerCase() == 'completed',
+    )
+    .toList();
+
+    if (rides.isEmpty) {
+  return const Center(
+    child: Padding(
+      padding: EdgeInsets.all(30),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.history,
+            size: 90,
+            color: Colors.grey,
+          ),
+          SizedBox(height: 20),
+          Text(
+            'No completed rides yet',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Your completed rides will appear here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
           // =================================================
           // RIDE LIST
@@ -563,6 +603,67 @@ class HistoryScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+
+                    const SizedBox(height: 16),
+
+const Divider(),
+
+const SizedBox(height: 10),
+
+Row(
+  children: [
+    Expanded(
+      child: Row(
+        children: [
+          Icon(
+            ride.paymentStatus.toLowerCase() == 'paid'
+                ? Icons.check_circle
+                : Icons.pending,
+            color:
+                ride.paymentStatus.toLowerCase() == 'paid'
+                    ? Colors.green
+                    : Colors.orange,
+            size: 20,
+          ),
+
+          const SizedBox(width: 7),
+
+          Text(
+            ride.paymentStatus.isEmpty
+                ? 'Payment Pending'
+                : ride.paymentStatus,
+            style: TextStyle(
+              color:
+                  ride.paymentStatus.toLowerCase() == 'paid'
+                      ? Colors.green
+                      : Colors.orange,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    ),
+
+    if (ride.driverRating > 0)
+      Row(
+        children: [
+          const Icon(
+            Icons.star,
+            color: Colors.amber,
+            size: 21,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${ride.driverRating}/5',
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+  ],
+),
                     ],
                   ),
                 ),

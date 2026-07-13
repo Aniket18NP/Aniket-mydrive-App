@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/ride_request_service.dart';
 import 'trip_completed_screen.dart';
@@ -48,6 +49,9 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
 
   Timer? tripTimer;
   Timer? driverTimer;
+
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+    rideSubscription;
 
   int tripSeconds = 0;
 
@@ -106,14 +110,101 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
     startTripTimer();
     loadCarIcon();
 
+    listenToRideStatus();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       startDriverMovement();
     });
   }
 
+// =========================================================
+// DRIVER COMPLETED THE TRIP
+// =========================================================
+
+Future<void> _handleDriverCompletedTrip() async {
+  if (tripCompleted) {
+    return;
+  }
+
+  // Lock immediately to prevent duplicate navigation.
+  tripCompleted = true;
+
+  tripTimer?.cancel();
+  driverTimer?.cancel();
+
+  await rideSubscription?.cancel();
+
+  debugPrint("====================================");
+  debugPrint("DRIVER COMPLETED TRIP");
+  debugPrint("RIDE ID: ${widget.rideId}");
+  debugPrint("OPENING TRIP COMPLETED SCREEN");
+  debugPrint("====================================");
+
+  if (!mounted) return;
+
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => TripCompletedScreen(
+        rideId: widget.rideId,
+        fare: widget.fare,
+        distance: originalDistance,
+        tripTime: tripTime,
+        rideType: widget.rideType,
+        pickup: widget.pickupAddress,
+        destination: widget.destinationAddress,
+      ),
+    ),
+  );
+}
+
+
   // =========================================================
   // ONE METHOD FOR ALL TRIP COMPLETION
   // =========================================================
+
+// =========================================================
+// LISTEN TO RIDE STATUS FROM DRIVER APP
+// =========================================================
+
+void listenToRideStatus() {
+  rideSubscription?.cancel();
+
+  rideSubscription = FirebaseFirestore.instance
+      .collection("rides")
+      .doc(widget.rideId)
+      .snapshots()
+      .listen(
+    (snapshot) {
+      if (!snapshot.exists) {
+        debugPrint(
+          "Ride document not found: ${widget.rideId}",
+        );
+        return;
+      }
+
+      final data = snapshot.data();
+
+      if (data == null) return;
+
+      final String status =
+          data["status"]?.toString() ?? "";
+
+      debugPrint(
+        "Passenger LiveTrip status: $status",
+      );
+
+      if (status == "Completed") {
+        _handleDriverCompletedTrip();
+      }
+    },
+    onError: (error) {
+      debugPrint(
+        "Ride status listener error: $error",
+      );
+    },
+  );
+}
 
   Future<void> finishTrip() async {
     // Stop if trip was already completed.
@@ -211,9 +302,6 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
           }
         });
 
-        if (remainingDistance <= 0) {
-          finishTrip();
-        }
       },
     );
   }
@@ -263,11 +351,15 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
         }
 
         if (currentRouteIndex >=
-            widget.routePoints.length) {
-          timer.cancel();
-          finishTrip();
-          return;
-        }
+    widget.routePoints.length) {
+  timer.cancel();
+
+  debugPrint(
+    "Simulated route finished. Waiting for driver to complete trip.",
+  );
+
+  return;
+}
 
         final nextPoint =
             widget.routePoints[currentRouteIndex];
@@ -344,13 +436,14 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
   // =========================================================
 
   @override
-  void dispose() {
-    tripTimer?.cancel();
-    driverTimer?.cancel();
-    mapController?.dispose();
+void dispose() {
+  tripTimer?.cancel();
+  driverTimer?.cancel();
+  rideSubscription?.cancel();
+  mapController?.dispose();
 
-    super.dispose();
-  }
+  super.dispose();
+}
 
   // =========================================================
   // UI
@@ -452,18 +545,40 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
 
                 const SizedBox(height: 20),
 
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed:
-                        tripCompleted ? null : finishTrip,
-                    child: const Text("End Ride"),
-                  ),
-                ),
+                Container(
+  width: double.infinity,
+  padding: const EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 14,
+  ),
+  decoration: BoxDecoration(
+    color: Colors.blue.shade50,
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(
+      color: Colors.blue.shade200,
+    ),
+  ),
+  child: const Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(
+        Icons.directions_car,
+        color: Colors.blue,
+      ),
+      SizedBox(width: 10),
+      Flexible(
+        child: Text(
+          "Trip in progress — waiting for driver to complete the ride",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.blue,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    ],
+  ),
+),
               ],
             ),
           ),

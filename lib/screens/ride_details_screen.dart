@@ -11,11 +11,11 @@ class RideDetailsScreen extends StatelessWidget {
   });
 
   // =========================================================
-  // FORMAT DATE
-  // Example: 10 Jul 2026
+  // FORMAT DATE AND TIME
+  // Example: 13 Jul 2026 • 9:30 AM
   // =========================================================
 
-  String formatDate(DateTime date) {
+  String formatDateTime(DateTime date) {
     const months = [
       'Jan',
       'Feb',
@@ -31,30 +31,28 @@ class RideDetailsScreen extends StatelessWidget {
       'Dec',
     ];
 
-    final day = date.day.toString().padLeft(2, '0');
-    final month = months[date.month - 1];
-    final year = date.year;
+    final String day =
+        date.day.toString().padLeft(2, '0');
 
-    return '$day $month $year';
-  }
+    final String month =
+        months[date.month - 1];
 
-  // =========================================================
-  // FORMAT TIME
-  // Example: 3:02 PM
-  // =========================================================
+    final int year = date.year;
 
-  String formatTime(DateTime date) {
-    final hour = date.hour == 0
+    final int hour = date.hour == 0
         ? 12
         : date.hour > 12
             ? date.hour - 12
             : date.hour;
 
-    final minute = date.minute.toString().padLeft(2, '0');
+    final String minute =
+        date.minute.toString().padLeft(2, '0');
 
-    final period = date.hour >= 12 ? 'PM' : 'AM';
+    final String period =
+        date.hour >= 12 ? 'PM' : 'AM';
 
-    return '$hour:$minute $period';
+    return '$day $month $year • '
+        '$hour:$minute $period';
   }
 
   // =========================================================
@@ -65,6 +63,9 @@ class RideDetailsScreen extends StatelessWidget {
     switch (status.toLowerCase()) {
       case 'completed':
         return Colors.green;
+
+      case 'in progress':
+        return Colors.purple;
 
       case 'accepted':
         return Colors.blue;
@@ -145,7 +146,8 @@ class RideDetailsScreen extends StatelessWidget {
 
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
@@ -178,7 +180,11 @@ class RideDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = getStatusColor(ride.status);
+    final Color statusColor =
+        getStatusColor(ride.status);
+
+    final bool isPaid =
+        ride.paymentStatus.toLowerCase() == 'paid';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -195,7 +201,6 @@ class RideDetailsScreen extends StatelessWidget {
 
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-
         child: Column(
           children: [
             // =================================================
@@ -209,18 +214,21 @@ class RideDetailsScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
-
               child: Column(
                 children: [
                   CircleAvatar(
                     radius: 38,
-                    backgroundColor: statusColor.withValues(
+                    backgroundColor:
+                        statusColor.withValues(
                       alpha: 0.12,
                     ),
                     child: Icon(
-                      ride.status.toLowerCase() == 'completed'
+                      ride.status.toLowerCase() ==
+                              'completed'
                           ? Icons.check_circle
-                          : getRideIcon(ride.rideType),
+                          : getRideIcon(
+                              ride.rideType,
+                            ),
                       color: statusColor,
                       size: 48,
                     ),
@@ -240,7 +248,9 @@ class RideDetailsScreen extends StatelessWidget {
                   const SizedBox(height: 6),
 
                   Text(
-                    '${formatDate(ride.createdAt)} • ${formatTime(ride.createdAt)}',
+                    formatDateTime(
+                      ride.createdAt,
+                    ),
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 15,
@@ -263,9 +273,9 @@ class RideDetailsScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
-
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Route Details',
@@ -307,9 +317,9 @@ class RideDetailsScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
-
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Trip Information',
@@ -322,7 +332,9 @@ class RideDetailsScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   detailRow(
-                    icon: getRideIcon(ride.rideType),
+                    icon: getRideIcon(
+                      ride.rideType,
+                    ),
                     title: 'Ride Type',
                     value: ride.rideType,
                   ),
@@ -342,6 +354,36 @@ class RideDetailsScreen extends StatelessWidget {
                         'NPR ${ride.fare.toStringAsFixed(0)}',
                     iconColor: Colors.green,
                   ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // =================================================
+            // PAYMENT AND RATING
+            // =================================================
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Payment & Rating',
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
 
                   detailRow(
                     icon: Icons.payment,
@@ -353,23 +395,103 @@ class RideDetailsScreen extends StatelessWidget {
                   ),
 
                   detailRow(
-                    icon: Icons.calendar_today,
-                    title: 'Date',
-                    value: formatDate(ride.createdAt),
-                    iconColor: Colors.indigo,
+                    icon: isPaid
+                        ? Icons.check_circle
+                        : Icons.pending,
+                    title: 'Payment Status',
+                    value: ride.paymentStatus.isEmpty
+                        ? 'Pending'
+                        : ride.paymentStatus,
+                    iconColor: isPaid
+                        ? Colors.green
+                        : Colors.orange,
                   ),
 
                   detailRow(
-                    icon: Icons.access_time,
-                    title: 'Time',
-                    value: formatTime(ride.createdAt),
+                    icon: Icons.star,
+                    title: 'Your Rating',
+                    value: ride.driverRating > 0
+                        ? '${ride.driverRating}/5 ⭐'
+                        : 'Not rated',
+                    iconColor: Colors.amber,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // =================================================
+            // TRIP TIMELINE
+            // =================================================
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Trip Timeline',
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  detailRow(
+                    icon: Icons.calendar_today,
+                    title: 'Booked At',
+                    value: formatDateTime(
+                      ride.createdAt,
+                    ),
+                    iconColor: Colors.blue,
+                  ),
+
+                  detailRow(
+                    icon: Icons.play_circle,
+                    title: 'Trip Started At',
+                    value: ride.tripStartedAt == null
+                        ? 'Not available'
+                        : formatDateTime(
+                            ride.tripStartedAt!,
+                          ),
+                    iconColor: Colors.purple,
+                  ),
+
+                  detailRow(
+                    icon: Icons.flag,
+                    title: 'Completed At',
+                    value: ride.completedAt == null
+                        ? 'Not available'
+                        : formatDateTime(
+                            ride.completedAt!,
+                          ),
+                    iconColor: Colors.green,
+                  ),
+
+                  detailRow(
+                    icon: Icons.receipt_long,
+                    title: 'Paid At',
+                    value: ride.paidAt == null
+                        ? 'Not available'
+                        : formatDateTime(
+                            ride.paidAt!,
+                          ),
                     iconColor: Colors.teal,
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // =================================================
             // RIDE ID
@@ -382,9 +504,9 @@ class RideDetailsScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
               ),
-
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Ride ID',

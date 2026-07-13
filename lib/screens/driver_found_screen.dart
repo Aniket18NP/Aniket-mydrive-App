@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'live_trip_screen.dart';
 import 'chat_screen.dart';
+import '../services/ride_request_service.dart';
 
 class DriverFoundScreen extends StatefulWidget {
   final String rideId;
@@ -370,11 +371,21 @@ if (status == 'In Progress' && !tripScreenOpened) {
           '${driverData['rating']}',
         );
 
-        final ratingResult =
-            await _calculateDriverRating(
-          cleanDriverId,
-          driverData,
-        );
+        final dynamic ratingValue =
+    driverData['rating'];
+
+final dynamic ratingCountValue =
+    driverData['ratingCount'];
+
+final double realDriverRating =
+    ratingValue is num
+        ? ratingValue.toDouble().clamp(0.0, 5.0)
+        : 5.0;
+
+final int realRatingCount =
+    ratingCountValue is num
+        ? ratingCountValue.toInt()
+        : 0;
 
         if (!mounted) return;
 
@@ -405,10 +416,9 @@ if (status == 'In Progress' && !tripScreenOpened) {
                       .trim() ??
                   '';
 
-          driverRating = ratingResult.average;
+         driverRating = realDriverRating;
 
-          totalRatings = ratingResult.count;
-
+          totalRatings = realRatingCount;
           isLoadingDriver = false;
 
           driverLoadError = null;
@@ -666,7 +676,74 @@ Future<void> _callDriver() async {
   }
 }
 
+Future<void> _cancelRide() async {
+  final bool? confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Cancel Ride?'),
+        content: const Text(
+          'Are you sure you want to cancel this ride?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text(
+              'Yes, Cancel Ride',
+              style: TextStyle(
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
 
+  if (confirmed != true) {
+    return;
+  }
+
+  try {
+    await RideRequestService().cancelRideByPassenger(
+      widget.rideId,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Ride cancelled successfully.',
+        ),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    Navigator.of(context).popUntil(
+      (route) => route.isFirst,
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Unable to cancel ride: $e',
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
 
   @override
   void dispose() {
@@ -1194,9 +1271,7 @@ Future<void> _callDriver() async {
                               BorderRadius.circular(15),
                         ),
                       ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed: _cancelRide,
                       child: const Text(
                         'Cancel Ride',
                         style: TextStyle(

@@ -115,15 +115,180 @@ class RideRequestService {
   // =========================================================
 
   Future<void> rateDriver({
-    required String rideId,
-    required int rating,
-  }) async {
-    await _firestore
-        .collection("rides")
-        .doc(rideId)
-        .update({
-      "driverRating": rating,
-      "ratedAt": FieldValue.serverTimestamp(),
-    });
+  required String rideId,
+  required int rating,
+}) async {
+  // Only allow ratings from 1 to 5.
+  if (rating < 1 || rating > 5) {
+    throw Exception(
+      "Rating must be between 1 and 5.",
+    );
   }
+
+  final DocumentReference<Map<String, dynamic>> rideRef =
+      _firestore
+          .collection("rides")
+          .doc(rideId);
+
+  await _firestore.runTransaction((transaction) async {
+    // -------------------------------------------------------
+    // 1. GET THE RIDE
+    // -------------------------------------------------------
+
+    final rideSnapshot =
+        await transaction.get(rideRef);
+
+    if (!rideSnapshot.exists) {
+      throw Exception("Ride not found.");
+    }
+
+    final rideData = rideSnapshot.data();
+
+    if (rideData == null) {
+      throw Exception("Ride data is empty.");
+    }
+
+    final String driverId =
+        rideData["driverId"]?.toString() ?? "";
+
+    if (driverId.isEmpty) {
+      throw Exception(
+        "No driver is assigned to this ride.",
+      );
+    }
+
+    // Prevent the same ride from affecting
+    // the driver's average rating more than once.
+    final bool alreadyRated =
+        rideData["driverRating"] != null;
+
+    if (alreadyRated) {
+      throw Exception(
+        "This ride has already been rated.",
+      );
+    }
+
+    // -------------------------------------------------------
+    // 2. GET THE DRIVER PROFILE
+    // -------------------------------------------------------
+
+    final DocumentReference<Map<String, dynamic>>
+        driverRef = _firestore
+            .collection("drivers")
+            .doc(driverId);
+
+    final driverSnapshot =
+        await transaction.get(driverRef);
+
+    if (!driverSnapshot.exists) {
+      throw Exception(
+        "Driver profile not found.",
+      );
+    }
+
+    final driverData = driverSnapshot.data() ?? {};
+
+    final int currentRatingCount =
+        (driverData["ratingCount"] as num?)
+                ?.toInt() ??
+            0;
+
+    final int currentRatingTotal =
+        (driverData["ratingTotal"] as num?)
+                ?.toInt() ??
+            0;
+
+    // -------------------------------------------------------
+    // 3. CALCULATE NEW AVERAGE
+    // -------------------------------------------------------
+
+    final int newRatingCount =
+        currentRatingCount + 1;
+
+    final int newRatingTotal =
+        currentRatingTotal + rating;
+
+    final double newAverageRating =
+        newRatingTotal / newRatingCount;
+
+    // -------------------------------------------------------
+    // 4. UPDATE THE RIDE
+    // -------------------------------------------------------
+
+    transaction.update(
+      rideRef,
+      {
+        "driverRating": rating,
+        "ratedAt": FieldValue.serverTimestamp(),
+      },
+    );
+
+    // -------------------------------------------------------
+    // 5. UPDATE THE DRIVER PROFILE
+    // -------------------------------------------------------
+
+    transaction.update(
+      driverRef,
+      {
+        "rating": newAverageRating,
+        "ratingCount": newRatingCount,
+        "ratingTotal": newRatingTotal,
+      },
+    );
+  });
+}
+
+// =========================================================
+// CANCEL RIDE BY PASSENGER
+// =========================================================
+
+Future<void> cancelRideByPassenger(
+  String rideId,
+) async {
+  final rideRef = _firestore
+      .collection("rides")
+      .doc(rideId);
+
+  await _firestore.runTransaction(
+    (transaction) async {
+      final rideSnapshot =
+          await transaction.get(rideRef);
+
+      if (!rideSnapshot.exists) {
+        throw Exception("Ride not found.");
+      }
+
+      final data = rideSnapshot.data();
+
+      if (data == null) {
+        throw Exception("Ride data is unavailable.");
+      }
+
+      final String currentStatus =
+          data["status"]?.toString() ?? "";
+
+      // Passenger can cancel only before trip starts.
+      final bool canCancel =
+          currentStatus == "Searching" ||
+          currentStatus == "Accepted" ||
+          currentStatus == "Arrived";
+
+      if (!canCancel) {
+        throw Exception(
+          "This ride can no longer be cancelled.",
+        );
+      }
+
+      transaction.update(
+        rideRef,
+        {
+          "status": "Cancelled",
+          "cancelledBy": "Passenger",
+          "cancelledAt":
+              FieldValue.serverTimestamp(),
+        },
+      );
+    },
+  );
+}
 }

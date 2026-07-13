@@ -43,9 +43,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
           .collection("rides")
           .doc(widget.rideId)
           .update({
-        "paymentMethod": selected,
-        "paymentStatus": "Paid",
-      });
+  "paymentMethod": selected,
+  "paymentStatus": "Paid",
+  "paidAt": FieldValue.serverTimestamp(),
+});
 
       print("Payment updated successfully!");
 
