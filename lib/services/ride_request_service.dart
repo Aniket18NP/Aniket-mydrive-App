@@ -242,9 +242,20 @@ class RideRequestService {
 // CANCEL RIDE BY PASSENGER
 // =========================================================
 
-Future<void> cancelRideByPassenger(
-  String rideId,
-) async {
+// =========================================================
+// CANCEL RIDE BY PASSENGER
+// =========================================================
+
+Future<void> cancelRideByPassenger({
+  required String rideId,
+  required String reason,
+}) async {
+  if (reason.trim().isEmpty) {
+    throw Exception(
+      "Please select a cancellation reason.",
+    );
+  }
+
   final rideRef = _firestore
       .collection("rides")
       .doc(rideId);
@@ -261,13 +272,14 @@ Future<void> cancelRideByPassenger(
       final data = rideSnapshot.data();
 
       if (data == null) {
-        throw Exception("Ride data is unavailable.");
+        throw Exception(
+          "Ride data is unavailable.",
+        );
       }
 
       final String currentStatus =
           data["status"]?.toString() ?? "";
 
-      // Passenger can cancel only before trip starts.
       final bool canCancel =
           currentStatus == "Searching" ||
           currentStatus == "Accepted" ||
@@ -284,10 +296,41 @@ Future<void> cancelRideByPassenger(
         {
           "status": "Cancelled",
           "cancelledBy": "Passenger",
+          "cancellationReason": reason.trim(),
           "cancelledAt":
               FieldValue.serverTimestamp(),
         },
       );
+      final String driverId =
+    data["driverId"]?.toString() ?? "";
+
+// If a driver already accepted this ride,
+// update that driver's availability.
+if (driverId.isNotEmpty) {
+  final driverRef = _firestore
+      .collection("drivers")
+      .doc(driverId);
+
+  final driverSnapshot =
+      await transaction.get(driverRef);
+
+  if (driverSnapshot.exists) {
+    final driverData =
+        driverSnapshot.data() ?? {};
+
+    final bool driverIsOnline =
+        driverData["isOnline"] == true;
+
+    // Driver becomes available only
+    // if the driver is still online.
+    transaction.update(
+      driverRef,
+      {
+        "isAvailable": driverIsOnline,
+      },
+    );
+  }
+}
     },
   );
 }

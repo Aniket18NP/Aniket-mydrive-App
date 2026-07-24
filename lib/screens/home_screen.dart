@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'map_screen.dart';
 
 import 'history_screen.dart';
@@ -12,6 +14,55 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+
+  Future<void> _getCurrentLocation() async {
+  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+  if (!serviceEnabled) {
+    return;
+  }
+
+  LocationPermission permission =
+      await Geolocator.checkPermission();
+
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+  }
+
+  if (permission == LocationPermission.deniedForever) {
+    return;
+  }
+
+  Position position = await Geolocator.getCurrentPosition(
+    desiredAccuracy: LocationAccuracy.high,
+  );
+
+  List<Placemark> placemarks =
+      await placemarkFromCoordinates(
+    position.latitude,
+    position.longitude,
+  );
+
+  if (placemarks.isNotEmpty) {
+    Placemark place = placemarks.first;
+
+    _pickupController.text =
+        "${place.street}, ${place.locality}";
+  }
+}
+
+  final TextEditingController _pickupController =
+    TextEditingController();
+
+final TextEditingController _destinationController =
+    TextEditingController();
+
+@override
+void initState() {
+  super.initState();
+
+  _getCurrentLocation();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -68,32 +119,32 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 25),
 
             TextField(
-              decoration: InputDecoration(
-                hintText: "Pickup Location",
-                prefixIcon: const Icon(
-                  Icons.my_location,
-                  color: Colors.green,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 15),
+  controller: _pickupController,
+  decoration: InputDecoration(
+    hintText: "Pickup Location",
+    prefixIcon: const Icon(
+      Icons.my_location,
+      color: Colors.green,
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+    ),
+  ),
+),
 
             TextField(
-              decoration: InputDecoration(
-                hintText: "Drop Location",
-                prefixIcon: const Icon(
-                  Icons.location_on,
-                  color: Colors.red,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-            ),
+  controller: _destinationController,
+  decoration: InputDecoration(
+    hintText: "Drop Location",
+    prefixIcon: const Icon(
+      Icons.location_on,
+      color: Colors.red,
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+    ),
+  ),
+),
 
             const SizedBox(height: 25),
 

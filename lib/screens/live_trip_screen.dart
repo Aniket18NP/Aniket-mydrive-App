@@ -53,6 +53,9 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
     rideSubscription;
 
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+    driverLocationSubscription;
+
   int tripSeconds = 0;
 
   late double remainingDistance;
@@ -66,6 +69,11 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
 
   BitmapDescriptor? carIcon;
 
+  String driverName = "Loading...";
+String vehicleName = "";
+String vehicleNumber = "";
+double driverRating = 5.0;
+
   final Set<Marker> markers = {};
   final Set<Polyline> polylines = {};
 
@@ -75,6 +83,33 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
   );
 
   double carRotation = 0;
+
+double _calculateDistanceInMeters(
+  double lat1,
+  double lon1,
+  double lat2,
+  double lon2,
+) {
+  const double earthRadius = 6371000;
+
+  final double dLat =
+      (lat2 - lat1) * pi / 180;
+
+  final double dLon =
+      (lon2 - lon1) * pi / 180;
+
+  final double a =
+      sin(dLat / 2) * sin(dLat / 2) +
+      cos(lat1 * pi / 180) *
+          cos(lat2 * pi / 180) *
+          sin(dLon / 2) *
+          sin(dLon / 2);
+
+  final double c =
+      2 * atan2(sqrt(a), sqrt(1 - a));
+
+  return earthRadius * c;
+}
 
   // Prevents duplicate completion.
   bool tripCompleted = false;
@@ -112,9 +147,8 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
 
     listenToRideStatus();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      startDriverMovement();
-    });
+// Start listening to the driver's real GPS location.
+listenToDriverLocation();
   }
 
 // =========================================================
@@ -206,6 +240,211 @@ void listenToRideStatus() {
   );
 }
 
+// =========================================================
+// LISTEN TO REAL DRIVER LOCATION
+// =========================================================
+
+Future<void> listenToDriverLocation() async {
+  driverLocationSubscription?.cancel();
+
+  try {
+    // First get the ride document to find
+    // which driver accepted this ride.
+    final rideSnapshot = await FirebaseFirestore.instance
+        .collection("rides")
+        .doc(widget.rideId)
+        .get();
+
+    if (!rideSnapshot.exists) {
+      debugPrint(
+        "Cannot listen to driver location: ride not found.",
+      );
+      return;
+    }
+
+    final rideData = rideSnapshot.data();
+
+    if (rideData == null) {
+      debugPrint(
+        "Cannot listen to driver location: ride data is empty.",
+      );
+      return;
+    }
+
+    final String driverId =
+        rideData["driverId"]?.toString() ?? "";
+
+    if (driverId.isEmpty) {
+      debugPrint(
+        "Cannot listen to driver location: no driver assigned.",
+      );
+      return;
+    }
+
+    debugPrint(
+      "Listening to real driver location: $driverId",
+    );
+
+    driverLocationSubscription =
+        FirebaseFirestore.instance
+            .collection("drivers")
+            .doc(driverId)
+            .snapshots()
+            .listen(
+      (driverSnapshot) {
+        if (!driverSnapshot.exists) {
+          debugPrint(
+            "Driver profile not found: $driverId",
+          );
+          return;
+        }
+
+        final driverData = driverSnapshot.data();
+
+if (driverData == null) {
+  return;
+}
+
+final data = driverData;
+
+    driverName =
+    data["name"]?.toString() ?? "Driver";
+
+vehicleName =
+    data["vehicleName"]?.toString() ?? "";
+
+vehicleNumber =
+    data["vehicleNumber"]?.toString() ?? "";
+
+driverRating =
+    (data["rating"] as num?)?.toDouble() ?? 5.0;
+
+        if (driverData == null) {
+          return;
+        }
+
+        final double? latitude =
+            (driverData["latitude"] as num?)
+                ?.toDouble();
+
+        final double? longitude =
+            (driverData["longitude"] as num?)
+                ?.toDouble();
+
+        if (latitude == null ||
+            longitude == null) {
+          debugPrint(
+            "Driver location is unavailable.",
+          );
+          return;
+        }
+
+        final LatLng newDriverPosition = LatLng(
+          latitude,
+          longitude,
+        );
+
+        debugPrint(
+          "Real driver location: "
+          "$latitude, $longitude",
+        );
+
+        // Calculate straight-line remaining distance
+// from the real driver position to the destination.
+final double remainingDistanceInMeters =
+    _calculateDistanceInMeters(
+  newDriverPosition.latitude,
+  newDriverPosition.longitude,
+  widget.destination.latitude,
+  widget.destination.longitude,
+);
+
+final double newRemainingDistance =
+    remainingDistanceInMeters / 1000;
+
+// Temporary ETA calculation using an average
+// driving speed of 30 km/h.
+final int newRemainingMinutes =
+    newRemainingDistance <= 0.05
+        ? 0
+        : max(
+            1,
+            ((newRemainingDistance / 30) * 60)
+                .ceil(),
+          );
+
+        // Calculate the direction from the old
+// GPS position to the new GPS position.
+if (driverPosition.latitude !=
+        newDriverPosition.latitude ||
+    driverPosition.longitude !=
+        newDriverPosition.longitude) {
+  final double dx =
+      newDriverPosition.longitude -
+      driverPosition.longitude;
+
+  final double dy =
+      newDriverPosition.latitude -
+      driverPosition.latitude;
+
+  carRotation =
+      atan2(dx, dy) * 180 / pi;
+}
+
+        if (!mounted || tripCompleted) {
+          return;
+        }
+
+        setState(() {
+  driverPosition = newDriverPosition;
+
+  remainingDistance = newRemainingDistance;
+  remainingMinutes = newRemainingMinutes;
+
+  markers.removeWhere(
+            (marker) =>
+                marker.markerId.value == "driver",
+          );
+
+          markers.add(
+            Marker(
+              markerId: const MarkerId("driver"),
+              position: driverPosition,
+              rotation: carRotation,
+              flat: true,
+              anchor: const Offset(0.5, 0.5),
+              icon: carIcon ??
+                  BitmapDescriptor.defaultMarker,
+              infoWindow: const InfoWindow(
+                title: "Driver",
+              ),
+            ),
+          );
+        });
+        mapController?.animateCamera(
+  CameraUpdate.newCameraPosition(
+    CameraPosition(
+      target: newDriverPosition,
+      zoom: 17,
+      tilt: 45,
+      bearing: carRotation,
+    ),
+  ),
+);
+      },
+      onError: (error) {
+        debugPrint(
+          "Driver location listener error: $error",
+        );
+      },
+    );
+  } catch (e) {
+    debugPrint(
+      "Error starting driver location listener: $e",
+    );
+  }
+}
+
   Future<void> finishTrip() async {
     // Stop if trip was already completed.
     if (tripCompleted) {
@@ -274,38 +513,24 @@ void listenToRideStatus() {
   // TRIP TIMER
   // =========================================================
 
-  void startTripTimer() {
-    tripTimer?.cancel();
+void startTripTimer() {
+  tripTimer?.cancel();
 
-    tripTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (timer) {
-        if (!mounted || tripCompleted) {
-          timer.cancel();
-          return;
-        }
+  tripTimer = Timer.periodic(
+    const Duration(seconds: 1),
+    (timer) {
+      if (!mounted || tripCompleted) {
+        timer.cancel();
+        return;
+      }
 
-        setState(() {
-          tripSeconds++;
-
-          if (remainingDistance > 0) {
-            remainingDistance -= 0.01;
-
-            if (remainingDistance < 0) {
-              remainingDistance = 0;
-            }
-          }
-
-          if (tripSeconds % 30 == 0 &&
-              remainingMinutes > 0) {
-            remainingMinutes--;
-          }
-        });
-
-      },
-    );
-  }
-
+      setState(() {
+        // Only update the real elapsed trip time.
+        tripSeconds++;
+      });
+    },
+  );
+}
   // =========================================================
   // LOAD CAR ICON
   // =========================================================
@@ -440,6 +665,7 @@ void dispose() {
   tripTimer?.cancel();
   driverTimer?.cancel();
   rideSubscription?.cancel();
+  driverLocationSubscription?.cancel();
   mapController?.dispose();
 
   super.dispose();
@@ -515,6 +741,40 @@ void dispose() {
             ),
             child: Column(
               children: [
+                Card(
+  elevation: 2,
+  child: ListTile(
+    leading: const CircleAvatar(
+      radius: 28,
+      child: Icon(Icons.person),
+    ),
+    title: Text(
+      driverName,
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    subtitle: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        Text(vehicleName),
+        Text(vehicleNumber),
+      ],
+    ),
+    trailing: Column(
+      mainAxisAlignment:
+          MainAxisAlignment.center,
+      children: [
+        const Icon(
+          Icons.star,
+          color: Colors.orange,
+        ),
+        Text(driverRating.toString()),
+      ],
+    ),
+  ),
+),
                 ListTile(
                   leading: const Icon(Icons.timer),
                   title: const Text("Trip Time"),

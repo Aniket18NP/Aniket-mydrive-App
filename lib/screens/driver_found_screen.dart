@@ -716,52 +716,95 @@ Future<void> _callDriver() async {
 }
 
 Future<void> _cancelRide() async {
+  String? selectedReason;
+
   final bool? confirmed = await showDialog<bool>(
     context: context,
+    barrierDismissible: false,
     builder: (dialogContext) {
-      return AlertDialog(
-        title: const Text('Cancel Ride?'),
-        content: const Text(
-          'Are you sure you want to cancel this ride?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, false);
-            },
-            child: const Text('No'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, true);
-            },
-            child: const Text(
-              'Yes, Cancel Ride',
-              style: TextStyle(
-                color: Colors.red,
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          final List<String> reasons = [
+            "Changed my mind",
+            "Driver is too far away",
+            "Taking too long",
+            "Found another ride",
+            "Other",
+          ];
+
+          return AlertDialog(
+            title: const Text(
+              "Why are you cancelling?",
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: reasons.map((reason) {
+                  return RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(reason),
+                    value: reason,
+                    groupValue: selectedReason,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedReason = value;
+                      });
+                    },
+                  );
+                }).toList(),
               ),
             ),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(
+                    dialogContext,
+                    false,
+                  );
+                },
+                child: const Text("Keep Ride"),
+              ),
+              TextButton(
+                onPressed: selectedReason == null
+                    ? null
+                    : () {
+                        Navigator.pop(
+                          dialogContext,
+                          true,
+                        );
+                      },
+                child: const Text(
+                  "Cancel Ride",
+                  style: TextStyle(
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       );
     },
   );
 
-  if (confirmed != true) {
+  if (confirmed != true ||
+      selectedReason == null) {
     return;
   }
 
   try {
-    await RideRequestService().cancelRideByPassenger(
-      widget.rideId,
+    await RideRequestService()
+        .cancelRideByPassenger(
+      rideId: widget.rideId,
+      reason: selectedReason!,
     );
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          'Ride cancelled successfully.',
+          "Ride cancelled: $selectedReason",
         ),
         backgroundColor: Colors.green,
       ),
@@ -776,7 +819,7 @@ Future<void> _cancelRide() async {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Unable to cancel ride: $e',
+          "Unable to cancel ride: $e",
         ),
         backgroundColor: Colors.red,
       ),
