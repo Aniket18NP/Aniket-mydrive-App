@@ -12,28 +12,21 @@ class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() =>
-      _EditProfileScreenState();
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final TextEditingController nameController =
-      TextEditingController();
+  final TextEditingController nameController = TextEditingController();
 
-  final TextEditingController phoneController =
-      TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
 
-  final GlobalKey<FormState> _formKey =
-      GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final FirestoreService _firestoreService =
-      FirestoreService();
+  final FirestoreService _firestoreService = FirestoreService();
 
-  final StorageService _storageService =
-      StorageService();
+  final StorageService _storageService = StorageService();
 
-  final ImagePicker _picker =
-      ImagePicker();
+  final ImagePicker _picker = ImagePicker();
 
   bool isLoading = true;
   bool isSaving = false;
@@ -51,8 +44,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> loadUser() async {
     try {
-      final firebaseUser =
-          FirebaseAuth.instance.currentUser;
+      final firebaseUser = FirebaseAuth.instance.currentUser;
 
       if (firebaseUser == null) {
         if (!mounted) return;
@@ -61,12 +53,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           isLoading = false;
         });
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              "You are not logged in.",
-            ),
+            content: Text("You are not logged in."),
             backgroundColor: Colors.red,
           ),
         );
@@ -74,10 +63,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return;
       }
 
-      final user =
-          await _firestoreService.getUser(
-        firebaseUser.uid,
-      );
+      final user = await _firestoreService.getUser(firebaseUser.uid);
 
       if (!mounted) return;
 
@@ -86,12 +72,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           isLoading = false;
         });
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              "User profile not found.",
-            ),
+            content: Text("User profile not found."),
             backgroundColor: Colors.red,
           ),
         );
@@ -101,11 +84,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       currentUserData = user;
 
-      nameController.text =
-          user.fullName;
+      nameController.text = user.fullName;
 
-      phoneController.text =
-          user.phone;
+      phoneController.text = user.phone;
 
       setState(() {
         isLoading = false;
@@ -117,22 +98,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         isLoading = false;
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            "Failed to load profile: $e",
-          ),
+          content: Text("Failed to load profile: $e"),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  Future<void> pickImage(
-      ImageSource source) async {
-    final pickedImage =
-        await _picker.pickImage(
+  Future<void> pickImage(ImageSource source) async {
+    final pickedImage = await _picker.pickImage(
       source: source,
       imageQuality: 75,
     );
@@ -140,8 +116,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (pickedImage == null) return;
 
     setState(() {
-      selectedImage =
-          File(pickedImage.path);
+      selectedImage = File(pickedImage.path);
     });
 
     await uploadProfileImage();
@@ -150,8 +125,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> uploadProfileImage() async {
     if (selectedImage == null) return;
 
-    final firebaseUser =
-        FirebaseAuth.instance.currentUser;
+    final firebaseUser = FirebaseAuth.instance.currentUser;
 
     if (firebaseUser == null) return;
 
@@ -160,34 +134,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     try {
-      final imageUrl =
-          await _storageService
-              .uploadProfileImage(
+      final imageUrl = await _storageService.uploadProfileImage(
         uid: firebaseUser.uid,
         image: selectedImage!,
       );
 
       currentUserData = UserModel(
         uid: currentUserData!.uid,
-        fullName:
-            currentUserData!.fullName,
+        fullName: currentUserData!.fullName,
         email: currentUserData!.email,
         phone: currentUserData!.phone,
         profileImage: imageUrl,
       );
 
-      await _firestoreService.updateUser(
-        currentUserData!,
-      );
+      await _firestoreService.updateUser(currentUserData!);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            "Profile image updated successfully",
-          ),
+          content: Text("Profile image updated successfully"),
           backgroundColor: Colors.green,
         ),
       );
@@ -196,12 +162,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) {
         setState(() {
@@ -214,23 +177,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> saveProfile() async {
     if (isSaving) return;
 
-    final isValid =
-        _formKey.currentState
-                ?.validate() ??
-            false;
+    final isValid = _formKey.currentState?.validate() ?? false;
 
     if (!isValid) return;
 
-    final firebaseUser =
-        FirebaseAuth.instance.currentUser;
+    final firebaseUser = FirebaseAuth.instance.currentUser;
 
     if (firebaseUser == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            "You are not logged in.",
-          ),
+          content: Text("You are not logged in."),
           backgroundColor: Colors.red,
         ),
       );
@@ -238,12 +194,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
 
-        if (currentUserData == null) {
+    if (currentUserData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            "User information is not available.",
-          ),
+          content: Text("User information is not available."),
           backgroundColor: Colors.red,
         ),
       );
@@ -263,17 +217,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         profileImage: currentUserData!.profileImage,
       );
 
-      await _firestoreService.updateUser(
-        updatedUser,
-      );
+      await _firestoreService.updateUser(updatedUser);
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            "Profile updated successfully!",
-          ),
+          content: Text("Profile updated successfully!"),
           backgroundColor: Colors.green,
         ),
       );
@@ -284,9 +234,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            "Failed to update profile: $e",
-          ),
+          content: Text("Failed to update profile: $e"),
           backgroundColor: Colors.red,
         ),
       );
@@ -325,10 +273,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               color: color.withOpacity(.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: color,
-            ),
+            child: Icon(icon, color: color),
           ),
         ),
         filled: true,
@@ -343,29 +288,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(
-            color: Colors.grey.shade200,
-          ),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: Colors.blue,
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: Colors.blue, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: Colors.red,
-          ),
+          borderSide: const BorderSide(color: Colors.red),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
       ),
     );
@@ -386,15 +321,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         centerTitle: true,
         title: const Text(
           "Edit Profile",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -406,8 +337,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius:
-                            BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(22),
                       ),
                       child: Column(
                         children: [
@@ -428,67 +358,106 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   child: selectedImage != null
                                       ? Image.file(
                                           selectedImage!,
+                                          width: 115,
+                                          height: 115,
                                           fit: BoxFit.cover,
                                         )
-                                      : currentUserData!
-                                              .profileImage
-                                              .isNotEmpty
-                                          ? Image.network(
-                                              currentUserData!
-                                                  .profileImage,
-                                              fit: BoxFit.cover,
-                                            )
-                                          : const Icon(
-                                              Icons.person,
-                                              size: 70,
-                                              color: Colors.blue,
-                                            ),
+                                      : currentUserData != null &&
+                                            currentUserData!
+                                                .profileImage
+                                                .isNotEmpty
+                                      ? Image.network(
+                                          currentUserData!.profileImage,
+                                          width: 115,
+                                          height: 115,
+                                          fit: BoxFit.cover,
+                                          loadingBuilder:
+                                              (
+                                                context,
+                                                child,
+                                                loadingProgress,
+                                              ) {
+                                                if (loadingProgress == null) {
+                                                  return child;
+                                                }
+
+                                                return const Center(
+                                                  child:
+                                                      CircularProgressIndicator(),
+                                                );
+                                              },
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return const Icon(
+                                                  Icons.person,
+                                                  size: 70,
+                                                  color: Colors.blue,
+                                                );
+                                              },
+                                        )
+                                      : const Icon(
+                                          Icons.person,
+                                          size: 70,
+                                          color: Colors.blue,
+                                        ),
                                 ),
                               ),
-                                                            Positioned(
+                              Positioned(
                                 right: 0,
                                 bottom: 0,
                                 child: GestureDetector(
                                   onTap: () {
                                     showModalBottomSheet(
-                                      context: context,
-                                      builder: (context) {
-                                        return SafeArea(
-                                          child: Wrap(
-                                            children: [
-                                              ListTile(
-                                                leading: const Icon(
-                                                  Icons.camera_alt,
-                                                ),
-                                                title: const Text(
-                                                  "Camera",
-                                                ),
-                                                onTap: () async {
-                                                  Navigator.pop(context);
-                                                  await pickImage(
-                                                    ImageSource.camera,
-                                                  );
-                                                },
-                                              ),
-                                              ListTile(
-                                                leading: const Icon(
-                                                  Icons.photo,
-                                                ),
-                                                title: const Text(
-                                                  "Gallery",
-                                                ),
-                                                onTap: () async {
-                                                  Navigator.pop(context);
-                                                  await pickImage(
-                                                    ImageSource.gallery,
-                                                  );
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    );
+  context: context,
+  shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(
+      top: Radius.circular(25),
+    ),
+  ),
+  builder: (context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Choose Profile Photo",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.camera_alt),
+              ),
+              title: const Text("Camera"),
+              onTap: () async {
+                Navigator.pop(context);
+                await pickImage(ImageSource.camera);
+              },
+            ),
+
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.photo_library),
+              ),
+              title: const Text("Gallery"),
+              onTap: () async {
+                Navigator.pop(context);
+                await pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  },
+);
                                   },
                                   child: Container(
                                     width: 40,
@@ -500,8 +469,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     child: uploadingImage
                                         ? const Padding(
                                             padding: EdgeInsets.all(10),
-                                            child:
-                                                CircularProgressIndicator(
+                                            child: CircularProgressIndicator(
                                               color: Colors.white,
                                               strokeWidth: 2,
                                             ),
@@ -527,9 +495,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           Text(
                             "Keep your personal information up to date",
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(color: Colors.grey),
                           ),
                         ],
                       ),
@@ -542,12 +508,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius:
-                            BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             "Personal Information",
@@ -564,11 +528,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             hint: "Enter your full name",
                             icon: Icons.person_outline,
                             color: Colors.blue,
-                            keyboardType:
-                                TextInputType.name,
+                            keyboardType: TextInputType.name,
                             validator: (value) {
-                              if (value == null ||
-                                  value.trim().isEmpty) {
+                              if (value == null || value.trim().isEmpty) {
                                 return "Please enter your name";
                               }
                               return null;
@@ -583,11 +545,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             hint: "Enter your phone number",
                             icon: Icons.phone_outlined,
                             color: Colors.green,
-                            keyboardType:
-                                TextInputType.phone,
+                            keyboardType: TextInputType.phone,
                             validator: (value) {
-                              if (value == null ||
-                                  value.trim().isEmpty) {
+                              if (value == null || value.trim().isEmpty) {
                                 return "Please enter phone number";
                               }
 
@@ -606,27 +566,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: const CircleAvatar(
                             backgroundColor: Colors.orange,
-                            child: Icon(
-                              Icons.email,
-                              color: Colors.white,
-                            ),
+                            child: Icon(Icons.email, color: Colors.white),
                           ),
-                          title: const Text(
-                            "Email Address",
-                          ),
-                          subtitle: Text(
-                            currentUserData!.email,
-                          ),
-                          trailing: const Icon(
-                            Icons.lock_outline,
-                          ),
+                          title: const Text("Email Address"),
+                          subtitle: Text(currentUserData!.email),
+                          trailing: const Icon(Icons.lock_outline),
                         ),
                       ),
 
@@ -636,33 +586,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton.icon(
-                        onPressed:
-                            isSaving ? null : saveProfile,
+                        onPressed: isSaving ? null : saveProfile,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                         icon: isSaving
                             ? const SizedBox(
                                 width: 22,
                                 height: 22,
-                                child:
-                                    CircularProgressIndicator(
+                                child: CircularProgressIndicator(
                                   color: Colors.white,
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Icon(
-                                Icons.save,
-                              ),
+                            : const Icon(Icons.save),
                         label: Text(
-                          isSaving
-                              ? "Saving..."
-                              : "Save Changes",
+                          isSaving ? "Saving..." : "Save Changes",
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 17,

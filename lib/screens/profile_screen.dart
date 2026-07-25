@@ -412,77 +412,147 @@ class ProfileScreen extends StatelessWidget {
                     // PROFILE HEADER
                     // =========================================
 
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 105,
-                            height: 105,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.blue.shade50,
-                              border: Border.all(
-                                color: Colors.blue.shade100,
-                                width: 3,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.person,
-                              size: 62,
-                              color: Colors.blue,
-                            ),
-                          ),
+                   Container(
+  width: 110,
+  height: 110,
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+    border: Border.all(
+      color: Colors.blue.shade100,
+      width: 3,
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.15),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  ),
+  child: ClipOval(
+    child: user.profileImage.isNotEmpty
+        ? Image.network(
+            user.profileImage,
+            fit: BoxFit.cover,
+            loadingBuilder: (
+              context,
+              child,
+              progress,
+            ) {
+              if (progress == null) {
+                return child;
+              }
 
-                          const SizedBox(height: 16),
-
-                          Text(
-                            user.fullName.isEmpty
-                                ? 'MyDrive Passenger'
-                                : user.fullName,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 25,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          Text(
-                            user.email,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const EditProfileScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.edit),
-                            label: const Text('Edit Profile'),
-                          ),
-                        ],
-                      ),
-                    ),
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            },
+            errorBuilder:
+                (_, __, ___) => const Icon(
+              Icons.person,
+              size: 60,
+              color: Colors.blue,
+            ),
+          )
+        : const Icon(
+            Icons.person,
+            size: 60,
+            color: Colors.blue,
+          ),
+  ),
+),
 
                     const SizedBox(height: 16),
+
+                    Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    Flexible(
+      child: Text(
+        user.fullName.isEmpty
+            ? 'MyDrive Passenger'
+            : user.fullName,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 25,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+    const SizedBox(width: 8),
+    const Icon(
+      Icons.verified,
+      color: Colors.green,
+      size: 22,
+    ),
+  ],
+),
+
+const SizedBox(height: 6),
+
+Text(
+  user.email,
+  textAlign: TextAlign.center,
+  style: TextStyle(
+    fontSize: 15,
+    color: Colors.grey.shade600,
+  ),
+),
+
+const SizedBox(height: 10),
+
+Container(
+  padding: const EdgeInsets.symmetric(
+    horizontal: 12,
+    vertical: 6,
+  ),
+  decoration: BoxDecoration(
+    color: Colors.green.shade50,
+    borderRadius: BorderRadius.circular(20),
+  ),
+  child: const Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(
+        Icons.check_circle,
+        color: Colors.green,
+        size: 18,
+      ),
+      SizedBox(width: 6),
+      Text(
+        "Verified Passenger",
+        style: TextStyle(
+          color: Colors.green,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ],
+  ),
+),
+
+const SizedBox(height: 18),
+
+SizedBox(
+  width: double.infinity,
+  child: ElevatedButton.icon(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.blue,
+      foregroundColor: Colors.white,
+    ),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const EditProfileScreen(),
+        ),
+      );
+    },
+    icon: const Icon(Icons.edit),
+    label: const Text("Edit Profile"),
+  ),
+),
+
+const SizedBox(height: 16),
 
                     // =========================================
                     // STATISTICS
