@@ -46,6 +46,19 @@ class FirestoreService {
         .update(user.toMap());
   }
 
+  /// Update FCM token
+Future<void> updateFcmToken(
+  String uid,
+  String token,
+) async {
+  await _firestore
+      .collection('users')
+      .doc(uid)
+      .update({
+    'fcmToken': token,
+  });
+}
+
   /// Delete user
   Future<void> deleteUser(String uid) async {
     await _firestore

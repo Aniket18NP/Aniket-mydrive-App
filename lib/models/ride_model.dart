@@ -23,6 +23,18 @@ class RideModel {
   final DateTime? completedAt;
   final DateTime? paidAt;
 
+  final double driverLatitude;
+final double driverLongitude;
+
+final double passengerLatitude;
+final double passengerLongitude;
+
+final double destinationLatitude;
+final double destinationLongitude;
+
+final DateTime? acceptedAt;
+final DateTime? arrivedAt;
+
   RideModel({
     required this.rideId,
     required this.passengerId,
@@ -40,6 +52,17 @@ class RideModel {
     this.tripStartedAt,
     this.completedAt,
     this.paidAt,
+    this.driverLatitude = 0,
+this.driverLongitude = 0,
+
+this.passengerLatitude = 0,
+this.passengerLongitude = 0,
+
+this.destinationLatitude = 0,
+this.destinationLongitude = 0,
+
+this.acceptedAt,
+this.arrivedAt,
   });
 
   // =========================================================
@@ -70,6 +93,23 @@ class RideModel {
       'paidAt': paidAt == null
           ? null
           : Timestamp.fromDate(paidAt!),
+
+      'driverLatitude': driverLatitude,
+'driverLongitude': driverLongitude,
+
+'passengerLatitude': passengerLatitude,
+'passengerLongitude': passengerLongitude,
+
+'destinationLatitude': destinationLatitude,
+'destinationLongitude': destinationLongitude,
+
+'acceptedAt': acceptedAt == null
+    ? null
+    : Timestamp.fromDate(acceptedAt!),
+
+'arrivedAt': arrivedAt == null
+    ? null
+    : Timestamp.fromDate(arrivedAt!),
     };
   }
 
@@ -81,52 +121,51 @@ class RideModel {
     Map<String, dynamic> map,
   ) {
     return RideModel(
-      rideId: map['rideId']?.toString() ?? '',
+  rideId: map['rideId']?.toString() ?? '',
+  passengerId: map['passengerId']?.toString() ?? '',
+  driverId: map['driverId']?.toString() ?? '',
+  pickup: map['pickup']?.toString() ?? '',
+  destination: map['destination']?.toString() ?? '',
+  distance: _toDouble(map['distance']),
+  fare: _toDouble(map['fare']),
+  rideType: map['rideType']?.toString() ?? '',
+  paymentMethod: map['paymentMethod']?.toString() ?? '',
+  paymentStatus: map['paymentStatus']?.toString() ?? '',
+  status: map['status']?.toString() ?? '',
+  driverRating: _toInt(map['driverRating']),
+  createdAt:
+      _toDateTime(map['createdAt']) ?? DateTime.now(),
+  tripStartedAt:
+      _toDateTime(map['tripStartedAt']),
+  completedAt:
+      _toDateTime(map['completedAt']),
+  paidAt:
+      _toDateTime(map['paidAt']),
 
-      passengerId:
-          map['passengerId']?.toString() ?? '',
+  driverLatitude:
+      _toDouble(map['driverLatitude']),
+  driverLongitude:
+      _toDouble(map['driverLongitude']),
 
-      driverId:
-          map['driverId']?.toString() ?? '',
+  passengerLatitude:
+      _toDouble(map['passengerLatitude']),
+  passengerLongitude:
+      _toDouble(map['passengerLongitude']),
 
-      pickup:
-          map['pickup']?.toString() ?? '',
+  destinationLatitude:
+      _toDouble(map['destinationLatitude']),
+  destinationLongitude:
+      _toDouble(map['destinationLongitude']),
 
-      destination:
-          map['destination']?.toString() ?? '',
+  acceptedAt:
+      _toDateTime(map['acceptedAt']),
 
-      distance: _toDouble(map['distance']),
-
-      fare: _toDouble(map['fare']),
-
-      rideType:
-          map['rideType']?.toString() ?? '',
-
-      paymentMethod:
-          map['paymentMethod']?.toString() ?? '',
-
-      paymentStatus:
-          map['paymentStatus']?.toString() ?? '',
-
-      status:
-          map['status']?.toString() ?? '',
-
-      driverRating:
-          _toInt(map['driverRating']),
-
-      createdAt:
-          _toDateTime(map['createdAt']) ??
-              DateTime.now(),
-
-      tripStartedAt:
-          _toDateTime(map['tripStartedAt']),
-
-      completedAt:
-          _toDateTime(map['completedAt']),
-
-      paidAt:
-          _toDateTime(map['paidAt']),
-    );
+  arrivedAt:
+      _toDateTime(map['arrivedAt']),
+);
+      
+      
+    
   }
 
   // =========================================================
